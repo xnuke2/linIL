@@ -10,7 +10,7 @@
 #define MAX_MSG_SIZE 256
 #define MSG_BUFFER_SIZE (MAX_MSG_SIZE + 10)
 
-// Имена очередей
+
 #define QUEUE_OTK_TO_ADJ "/otk_to_adj"
 #define QUEUE_ADJ_TO_OTK "/adj_to_otk"
 
@@ -26,12 +26,12 @@ int main() {
         .mq_curmsgs = 0
     };
 
-    // Открываем очереди (создаем, если не существуют)
+
     q_to_adj = mq_open(QUEUE_OTK_TO_ADJ, O_CREAT | O_WRONLY, 0666, &attr);
     q_from_adj = mq_open(QUEUE_ADJ_TO_OTK, O_CREAT | O_RDONLY, 0666, &attr);
 
     if (q_to_adj == (mqd_t)-1 || q_from_adj == (mqd_t)-1) {
-        perror("Ошибка открытия очереди");
+        perror("РћС€РёР±РєР° РѕС‚РєСЂС‹С‚РёСЏ РѕС‡РµСЂРµРґРё");
         exit(1);
     }
 
@@ -41,40 +41,38 @@ int main() {
     while (1) {
         snprintf(buffer, MAX_MSG_SIZE, "Product_%d", product_id++);
 
-        // Первая проверка - 85% проходят
+        
         if (rand() % 100 < 85) {
-            printf("[ОТК] %s соответствует требованиям\n", buffer);
+            printf("[РћРўРљ] %s СЃРѕРѕС‚РІРµС‚СЃРІСѓРµС‚ С‚СЂРµР±РѕРІР°РЅРёСЏРј\n", buffer);
         }
         else {
-            printf("[ОТК] %s не соответствует, отправляем на доработку\n", buffer);
+            printf("[РћРўРљ] %s РЅРµ СЃРѕРѕС‚РІРµС‚СЃРІСѓРµС‚, РѕС‚РїСЂР°РІР»РµРЅ РЅР° РґРѕСЂР°Р±РѕС‚РєСѓ\n", buffer);
             if (mq_send(q_to_adj, buffer, strlen(buffer) + 1, 0) == -1) {
-                perror("Ошибка отправки в очередь");
+                perror("РћС€РёР±РєР° РѕС‚РїСЂР°РІРєРё РІ РѕС‡РµСЂРµРґСЊ");
             }
         }
 
-        // Проверяем возвращенные продукты (неблокирующее чтение)
         struct timespec timeout = { 0, 0 };
         ssize_t bytes_read = mq_timedreceive(q_from_adj, buffer, MSG_BUFFER_SIZE, &priority, &timeout);
 
         if (bytes_read > 0) {
             buffer[bytes_read] = '\0';
-            printf("[ОТК] Получен доработанный продукт: %s\n", buffer);
+            printf("[РћРўРљ] РџРѕР»СѓС‡Р°РµРј РґРѕСЂР°Р±РѕС‚Р°РЅРЅС‹Р№ РїСЂРѕРґСѓРєС‚: %s\n", buffer);
 
-            // После доработки вероятность брака 2.5%
             if (rand() % 1000 < 25) {
-                printf("[ОТК] %s снова не соответствует, отправляем обратно\n", buffer);
+                printf("[РћРўРљ] %s СЃРЅРѕРІР° РЅРµ СЃРѕРѕС‚РІРµС‚СЃРІСѓРµС‚, РѕС‚РїСЂР°РІР»СЏРµРј РІ РѕС‚РґРµР»\n", buffer);
                 if (mq_send(q_to_adj, buffer, strlen(buffer) + 1, 0) == -1) {
-                    perror("Ошибка отправки в очередь");
+                    perror("РћС€РёР±РєР° РѕС‚РїСЂР°РІРєРё РІ РѕС‡РµСЂРµРґСЊ");
                 }
             }
             else {
-                printf("[ОТК] %s теперь соответствует после доработки\n", buffer);
+                printf("[РћРўРљ] %s СЃРѕРѕС‚РІРµС‚СЃРІСѓРµС‚ РїРѕСЃР»Рµ РґРѕСЂР°Р±РѕС‚РєРё\n", buffer);
             }
         }
 
-        sleep(1); // Задержка между продуктами
+        sleep(1); 
     }
 
-    // В реальной программе нужно закрыть очереди, но сюда мы не дойдем
+    
     return 0;
 }
