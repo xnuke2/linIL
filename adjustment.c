@@ -1,4 +1,4 @@
-#include <stdio.h>
+п»ї#include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/ipc.h>
@@ -26,7 +26,7 @@ int main() {
         exit(1);
     }
 
-    printf("[наладка] Отдел наладки готов к работе\n");
+    printf("[РЅР°Р»Р°РґРєР°] РћС‚РґРµР» РЅР°Р»Р°РґРєРё РіРѕС‚РѕРІ Рє СЂР°Р±РѕС‚Рµ\n");
     struct msgbuf message;
 
     while (1) {
@@ -35,9 +35,9 @@ int main() {
             continue;
         }
 
-        printf("[Наладка] Получен продукт на доработку: %s\n", message.mtext);
+        printf("[РќР°Р»Р°РґРєР°] РџРѕР»СѓС‡РµРЅ РїСЂРѕРґСѓРєС‚ РЅР° РґРѕСЂР°Р±РѕС‚РєСѓ: %s\n", message.mtext);
         sleep(2);
-        printf("[Наладка] Продукт %s доработан, возвращаем в ОТК\n", message.mtext);
+        printf("[РќР°Р»Р°РґРєР°] РџСЂРѕРґСѓРєС‚ %s РґРѕСЂР°Р±РѕС‚Р°РЅ, РІРѕР·РІСЂР°С‰Р°РµРј РІ РћРўРљ\n", message.mtext);
 
         message.mtype = MSG_TYPE_ADJ_TO_OTK;
         if (msgsnd(q_adj_otk, &message, strlen(message.mtext) + 1, 0) == -1) {

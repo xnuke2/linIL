@@ -1,4 +1,4 @@
-#include <stdio.h>
+п»ї#include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/ipc.h>
@@ -36,28 +36,28 @@ int main() {
         message.mtype = MSG_TYPE_OTK_TO_ADJ;
 
         if (rand() % 100 < 85) {
-            printf("[ОТК] %s соответствует требованиям\n", message.mtext);
+            printf("[РћРўРљ] %s СЃРѕРѕС‚РІРµС‚СЃС‚РІСѓРµС‚ С‚СЂРµР±РѕРІР°РЅРёСЏРј\n", message.mtext);
         }
         else {
-            printf("[ОТК] %s не соответствует, отправлен на доработку\n", message.mtext);
+            printf("[РћРўРљ] %s РЅРµ СЃРѕРѕС‚РІРµС‚СЃС‚РІСѓРµС‚, РѕС‚РїСЂР°РІР»РµРЅ РЅР° РґРѕСЂР°Р±РѕС‚РєСѓ\n", message.mtext);
             if (msgsnd(q_otk_adj, &message, strlen(message.mtext) + 1, 0) == -1) {
                 perror("msgsnd failed");
             }
         }
 
-        // Проверка возвращенных продуктов
+        // РџСЂРѕРІРµСЂРєР° РІРѕР·РІСЂР°С‰РµРЅРЅС‹С… РїСЂРѕРґСѓРєС‚РѕРІ
         if (msgrcv(q_adj_otk, &message, MAX_MSG_SIZE, MSG_TYPE_ADJ_TO_OTK, IPC_NOWAIT) > 0) {
-            printf("[ОТК] Получаем доработанный продукт: %s\n", message.mtext);
+            printf("[РћРўРљ] РџРѕР»СѓС‡Р°РµРј РґРѕСЂР°Р±РѕС‚Р°РЅРЅС‹Р№ РїСЂРѕРґСѓРєС‚: %s\n", message.mtext);
 
             if (rand() % 1000 < 25) {
-                printf("[ОТК] %s снова не соответствует, отправляем в отдел\n", message.mtext);
+                printf("[РћРўРљ] %s СЃРЅРѕРІР° РЅРµ СЃРѕРѕС‚РІРµС‚СЃС‚РІСѓРµС‚, РѕС‚РїСЂР°РІР»СЏРµРј РІ РѕС‚РґРµР»\n", message.mtext);
                 message.mtype = MSG_TYPE_OTK_TO_ADJ;
                 if (msgsnd(q_otk_adj, &message, strlen(message.mtext) + 1, 0) == -1) {
                     perror("msgsnd failed");
                 }
             }
             else {
-                printf("[ОТК] %s соответствует после доработки\n", message.mtext);
+                printf("[РћРўРљ] %s СЃРѕРѕС‚РІРµС‚СЃС‚РІСѓРµС‚ РїРѕСЃР»Рµ РґРѕСЂР°Р±РѕС‚РєРё\n", message.mtext);
             }
         }
 
