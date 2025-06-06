@@ -1,78 +1,68 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <fcntl.h>
-#include <sys/stat.h>
-#include <mqueue.h>
 #include <unistd.h>
-#include <time.h>
+#include <sys/ipc.h>
+#include <sys/msg.h>
 #include <string.h>
+#include <time.h>
 
 #define MAX_MSG_SIZE 256
-#define MSG_BUFFER_SIZE (MAX_MSG_SIZE + 10)
+#define MSG_TYPE_OTK_TO_ADJ 1
+#define MSG_TYPE_ADJ_TO_OTK 2
 
-
-#define QUEUE_OTK_TO_ADJ "/otk_to_adj"
-#define QUEUE_ADJ_TO_OTK "/adj_to_otk"
+struct msgbuf {
+    long mtype;
+    char mtext[MAX_MSG_SIZE];
+};
 
 int main() {
-    mqd_t q_to_adj, q_from_adj;
-    char buffer[MSG_BUFFER_SIZE];
-    unsigned int priority;
+    key_t key_otk_adj = ftok(".", 'a');
+    key_t key_adj_otk = ftok(".", 'b');
 
-    struct mq_attr attr = {
-        .mq_flags = 0,
-        .mq_maxmsg = 10,
-        .mq_msgsize = MAX_MSG_SIZE,
-        .mq_curmsgs = 0
-    };
+    int q_otk_adj = msgget(key_otk_adj, 0666 | IPC_CREAT);
+    int q_adj_otk = msgget(key_adj_otk, 0666 | IPC_CREAT);
 
-
-    q_to_adj = mq_open(QUEUE_OTK_TO_ADJ, O_CREAT | O_WRONLY, 0666, &attr);
-    q_from_adj = mq_open(QUEUE_ADJ_TO_OTK, O_CREAT | O_RDONLY, 0666, &attr);
-
-    if (q_to_adj == (mqd_t)-1 || q_from_adj == (mqd_t)-1) {
-        perror("РћС€РёР±РєР° РѕС‚РєСЂС‹С‚РёСЏ РѕС‡РµСЂРµРґРё");
+    if (q_otk_adj == -1 || q_adj_otk == -1) {
+        perror("msgget failed");
         exit(1);
     }
 
     srand(time(NULL));
     int product_id = 1;
+    struct msgbuf message;
 
     while (1) {
-        snprintf(buffer, MAX_MSG_SIZE, "Product_%d", product_id++);
+        snprintf(message.mtext, MAX_MSG_SIZE, "Product_%d", product_id++);
+        message.mtype = MSG_TYPE_OTK_TO_ADJ;
 
-        
         if (rand() % 100 < 85) {
-            printf("[РћРўРљ] %s СЃРѕРѕС‚РІРµС‚СЃРІСѓРµС‚ С‚СЂРµР±РѕРІР°РЅРёСЏРј\n", buffer);
+            printf("[ОТК] %s соответствует требованиям\n", message.mtext);
         }
         else {
-            printf("[РћРўРљ] %s РЅРµ СЃРѕРѕС‚РІРµС‚СЃРІСѓРµС‚, РѕС‚РїСЂР°РІР»РµРЅ РЅР° РґРѕСЂР°Р±РѕС‚РєСѓ\n", buffer);
-            if (mq_send(q_to_adj, buffer, strlen(buffer) + 1, 0) == -1) {
-                perror("РћС€РёР±РєР° РѕС‚РїСЂР°РІРєРё РІ РѕС‡РµСЂРµРґСЊ");
+            printf("[ОТК] %s не соответствует, отправлен на доработку\n", message.mtext);
+            if (msgsnd(q_otk_adj, &message, strlen(message.mtext) + 1, 0) == -1) {
+                perror("msgsnd failed");
             }
         }
 
-        struct timespec timeout = { 0, 0 };
-        ssize_t bytes_read = mq_timedreceive(q_from_adj, buffer, MSG_BUFFER_SIZE, &priority, &timeout);
-
-        if (bytes_read > 0) {
-            buffer[bytes_read] = '\0';
-            printf("[РћРўРљ] РџРѕР»СѓС‡Р°РµРј РґРѕСЂР°Р±РѕС‚Р°РЅРЅС‹Р№ РїСЂРѕРґСѓРєС‚: %s\n", buffer);
+        // Проверка возвращенных продуктов
+        if (msgrcv(q_adj_otk, &message, MAX_MSG_SIZE, MSG_TYPE_ADJ_TO_OTK, IPC_NOWAIT) > 0) {
+            printf("[ОТК] Получаем доработанный продукт: %s\n", message.mtext);
 
             if (rand() % 1000 < 25) {
-                printf("[РћРўРљ] %s СЃРЅРѕРІР° РЅРµ СЃРѕРѕС‚РІРµС‚СЃРІСѓРµС‚, РѕС‚РїСЂР°РІР»СЏРµРј РІ РѕС‚РґРµР»\n", buffer);
-                if (mq_send(q_to_adj, buffer, strlen(buffer) + 1, 0) == -1) {
-                    perror("РћС€РёР±РєР° РѕС‚РїСЂР°РІРєРё РІ РѕС‡РµСЂРµРґСЊ");
+                printf("[ОТК] %s снова не соответствует, отправляем в отдел\n", message.mtext);
+                message.mtype = MSG_TYPE_OTK_TO_ADJ;
+                if (msgsnd(q_otk_adj, &message, strlen(message.mtext) + 1, 0) == -1) {
+                    perror("msgsnd failed");
                 }
             }
             else {
-                printf("[РћРўРљ] %s СЃРѕРѕС‚РІРµС‚СЃРІСѓРµС‚ РїРѕСЃР»Рµ РґРѕСЂР°Р±РѕС‚РєРё\n", buffer);
+                printf("[ОТК] %s соответствует после доработки\n", message.mtext);
             }
         }
 
-        sleep(1); 
+        sleep(1);
     }
 
-    
     return 0;
 }

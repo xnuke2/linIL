@@ -1,57 +1,49 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <fcntl.h>
-#include <sys/stat.h>
-#include <mqueue.h>
 #include <unistd.h>
+#include <sys/ipc.h>
+#include <sys/msg.h>
 #include <string.h>
 
 #define MAX_MSG_SIZE 256
-#define MSG_BUFFER_SIZE (MAX_MSG_SIZE + 10)
+#define MSG_TYPE_OTK_TO_ADJ 1
+#define MSG_TYPE_ADJ_TO_OTK 2
 
-#define QUEUE_OTK_TO_ADJ "/otk_to_adj"
-#define QUEUE_ADJ_TO_OTK "/adj_to_otk"
+struct msgbuf {
+    long mtype;
+    char mtext[MAX_MSG_SIZE];
+};
 
 int main() {
-    mqd_t q_from_otk, q_to_otk;
-    char buffer[MSG_BUFFER_SIZE];
-    unsigned int priority;
+    key_t key_otk_adj = ftok(".", 'a');
+    key_t key_adj_otk = ftok(".", 'b');
 
-    struct mq_attr attr = {
-        .mq_flags = 0,
-        .mq_maxmsg = 10,
-        .mq_msgsize = MAX_MSG_SIZE,
-        .mq_curmsgs = 0
-    };
+    int q_otk_adj = msgget(key_otk_adj, 0666 | IPC_CREAT);
+    int q_adj_otk = msgget(key_adj_otk, 0666 | IPC_CREAT);
 
-    q_from_otk = mq_open(QUEUE_OTK_TO_ADJ, O_CREAT | O_RDONLY, 0666, &attr);
-    q_to_otk = mq_open(QUEUE_ADJ_TO_OTK, O_CREAT | O_WRONLY, 0666, &attr);
-
-    if (q_from_otk == (mqd_t)-1 || q_to_otk == (mqd_t)-1) {
-        perror("РћС€РёР±РєР° РѕС‚РєСЂС‹С‚РёСЏ РѕС‡РµСЂРµРґРё");
+    if (q_otk_adj == -1 || q_adj_otk == -1) {
+        perror("msgget failed");
         exit(1);
     }
 
-    printf("[РЅР°Р»Р°РґРєР°]РћС‚РґРµР» РЅР°Р»Р°РґРєРё РіРѕС‚РѕРІ Рє СЂР°Р±РѕС‚Рµ\n");
+    printf("[наладка] Отдел наладки готов к работе\n");
+    struct msgbuf message;
 
     while (1) {
-        ssize_t bytes_read = mq_receive(q_from_otk, buffer, MSG_BUFFER_SIZE, &priority);
-        if (bytes_read == -1) {
-            perror("РћС€РёР±РєРё С‡С‚РµРЅРёСЏ РёР· РѕС‡РµСЂРµРґРё");
+        if (msgrcv(q_otk_adj, &message, MAX_MSG_SIZE, MSG_TYPE_OTK_TO_ADJ, 0) == -1) {
+            perror("msgrcv failed");
             continue;
         }
 
-        buffer[bytes_read] = '\0';
-        printf("[РќР°Р»Р°РґРєР°] РџРѕР»СѓС‡РµРЅ РїСЂРѕРґСѓРєС‚ РЅР° РґРѕСЂР°Р±РѕС‚РєСѓ: %s\n", buffer);
-
+        printf("[Наладка] Получен продукт на доработку: %s\n", message.mtext);
         sleep(2);
+        printf("[Наладка] Продукт %s доработан, возвращаем в ОТК\n", message.mtext);
 
-        printf("[РќР°Р»Р°РґРєР°] РџСЂРѕРґСѓРєС‚ %s РґРѕСЂР°Р±РѕС‚Р°РЅ, РІРѕР·РІСЂР°С‰Р°РµРј РІ РћРўРљ\n", buffer);
-        if (mq_send(q_to_otk, buffer, strlen(buffer) + 1, 0) == -1) {
-            perror("РћС€РёР±РєР° РѕС‚РїСЂР°РІРєРё РІ РѕС‡РµСЂРµРґСЊ");
+        message.mtype = MSG_TYPE_ADJ_TO_OTK;
+        if (msgsnd(q_adj_otk, &message, strlen(message.mtext) + 1, 0) == -1) {
+            perror("msgsnd failed");
         }
     }
-
 
     return 0;
 }
