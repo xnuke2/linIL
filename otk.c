@@ -10,7 +10,7 @@
 #define MSG_TYPE_OTK_TO_ADJ 1
 #define MSG_TYPE_ADJ_TO_OTK 2
 
-struct msgbuf {
+struct msgbufnew {
     long mtype;
     char mtext[MAX_MSG_SIZE];
 };
@@ -29,7 +29,7 @@ int main() {
 
     srand(time(NULL));
     int product_id = 1;
-    struct msgbuf message;
+    struct msgbufnew message;
 
     while (1) {
         snprintf(message.mtext, MAX_MSG_SIZE, "Product_%d", product_id++);

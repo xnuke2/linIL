@@ -9,7 +9,7 @@
 #define MSG_TYPE_OTK_TO_ADJ 1
 #define MSG_TYPE_ADJ_TO_OTK 2
 
-struct msgbuf {
+struct msgbufnew {
     long mtype;
     char mtext[MAX_MSG_SIZE];
 };
@@ -27,7 +27,7 @@ int main() {
     }
 
     printf("[наладка] Отдел наладки готов к работе\n");
-    struct msgbuf message;
+    struct msgbufnew message;
 
     while (1) {
         if (msgrcv(q_otk_adj, &message, MAX_MSG_SIZE, MSG_TYPE_OTK_TO_ADJ, 0) == -1) {
